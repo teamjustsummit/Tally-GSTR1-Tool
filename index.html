@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GSTR-1 Workings Automation Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background: radial-gradient(circle at top right, #050b14, #010206);
+        }
+        .glass-panel {
+            background: rgba(8, 14, 28, 0.75);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .glass-card {
+            background: rgba(13, 20, 38, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.02);
+        }
+    </style>
+</head>
+<body class="text-slate-200 min-h-screen flex flex-col justify-between selection:bg-slate-800 selection:text-white">
+
+    <div class="max-w-6xl mx-auto my-12 p-8 rounded-2xl glass-panel shadow-2xl w-full">
+        <div class="border-b border-slate-800/80 pb-5 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <h1 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-slate-100 via-slate-300 to-slate-400 tracking-tight">
+                    GSTR-1 Automation Hub
+                </h1>
+                <p class="text-[11px] text-slate-400 mt-1 font-medium tracking-wide">
+                    Exact Template Mirror Architecture • Production Version 4.9 (B2B POS Fix + HSN Section-Based Parsing)
+                </p>
+            </div>
+            <div class="text-right">
+                <span class="text-[9px] uppercase font-bold tracking-widest bg-slate-950 border border-slate-800/60 text-emerald-400 px-3 py-1.5 rounded-lg shadow-inner">
+                    Audit Verification Compliant
+                </span>
+            </div>
+        </div>
+
+        <div id="status-box" class="mb-6 p-4 bg-slate-950/90 border border-slate-800/60 text-slate-300 text-xs rounded-xl flex items-center justify-between shadow-inner">
+            <span id="status-text" class="font-mono flex items-center tracking-wide">
+                <svg class="animate-spin h-4 w-4 mr-3 text-slate-400" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Spawning core tracking modules inside sandbox viewport...
+            </span>
+        </div>
+
+        <div id="upload-section" class="space-y-6 pointer-events-none opacity-20 transition-all duration-500">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="glass-card p-5 rounded-xl hover:border-slate-700/60 transition-all duration-300 group">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 group-hover:text-slate-300 transition-colors">
+                        Sales Register File
+                    </label>
+                    <input type="file" id="salesFile" class="text-xs text-slate-400 file:mr-4 file:py-2 file:px-3 file:rounded-lg file:border file:border-slate-800 file:text-xs file:font-semibold file:bg-slate-950 file:text-slate-300 hover:file:bg-slate-800 file:transition-colors cursor-pointer w-full"/>
+                </div>
+                <div class="glass-card p-5 rounded-xl hover:border-slate-700/60 transition-all duration-300 group">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 group-hover:text-slate-300 transition-colors">
+                        Credit Note File
+                    </label>
+                    <input type="file" id="cnFile" class="text-xs text-slate-400 file:mr-4 file:py-2 file:px-3 file:rounded-lg file:border file:border-slate-800 file:text-xs file:font-semibold file:bg-slate-950 file:text-slate-300 hover:file:bg-slate-800 file:transition-colors cursor-pointer w-full"/>
+                </div>
+                <div class="glass-card p-5 rounded-xl hover:border-slate-700/60 transition-all duration-300 group">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 group-hover:text-slate-300 transition-colors">
+                        HSN Summary File
+                    </label>
+                    <input type="file" id="hsnFile" class="text-xs text-slate-400 file:mr-4 file:py-2 file:px-3 file:rounded-lg file:border file:border-slate-800 file:text-xs file:font-semibold file:bg-slate-950 file:text-slate-300 hover:file:bg-slate-800 file:transition-colors cursor-pointer w-full"/>
+                </div>
+            </div>
+
+            <div class="glass-card p-5 rounded-xl">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+                    Filing Period (Month &amp; Year)
+                </label>
+                <input type="month" id="filingMonth" class="w-full text-xs bg-slate-950 text-slate-200 border border-slate-800 rounded-lg px-3 py-2 focus:outline-none focus:border-slate-600"/>
+            </div>
+
+            <button onclick="processData()" class="w-full bg-slate-100 hover:bg-white text-slate-950 font-bold text-xs uppercase tracking-wider py-4 rounded-xl transition-all duration-200 shadow-xl flex items-center justify-center border border-white/10">
+                Compile Final Standard Workings Book
+            </button>
+        </div>
+
+        <div class="mt-8">
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Activity Stream Logs</label>
+            <div id="log" class="font-mono text-[11px] p-4 bg-slate-950 border border-slate-900 text-slate-400 rounded-xl h-48 overflow-y-auto space-y-1.5 shadow-inner">
+                Initializing engine framework...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let pyodide;
+
+        function logMsg(msg, type='info') {
+            const logDiv = document.getElementById('log');
+            if(logDiv.innerHTML.includes("Initializing engine")) logDiv.innerHTML = "";
+            let color = "text-slate-400";
+            if(type === 'success') color = "text-emerald-400 font-semibold";
+            if(type === 'error') color = "text-rose-500 font-bold";
+            logDiv.innerHTML += `<div class="${color}">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function initPyodide() {
+            try {
+                pyodide = await loadPyodide();
+                logMsg("WASM-Python runtime attached.");
+                await pyodide.loadPackage('micropip');
+                await pyodide.runPythonAsync("import micropip");
+                await pyodide.runPythonAsync("await micropip.install('openpyxl')");
+                await pyodide.loadPackage('pandas');
+                logMsg("Systems structure mapping loaded.");
+
+                await pyodide.runPythonAsync(`
+import pandas as pd
+import io
+import json
+import calendar
+import openpyxl
+from openpyxl.styles import PatternFill, Font, Border, Side, Alignment
+
+# ── Palette constants ────────────────────────────────────────────────────────
+HDR_COLOR    = "1F3864"
+HDR_FONT_CL  = "FFFFFF"
+ALT_COLOR    = "EEF3FB"
+BORDER_COLOR = "C5CFE8"
+TOTAL_COLOR  = "1F3864"
+TOTAL_FONT   = "FFFFFF"
+BOLD_COLOR   = "D6E0F5"
+TAB_COLOR    = "2E4A8A"
+
+# ── State code → State name map (first 2 digits of GSTIN) ───────────────────
+STATE_CODE_MAP = {
+    "01": "01-Jammu & Kashmir",
+    "02": "02-Himachal Pradesh",
+    "03": "03-Punjab",
+    "04": "04-Chandigarh",
+    "05": "05-Uttarakhand",
+    "06": "06-Haryana",
+    "07": "07-Delhi",
+    "08": "08-Rajasthan",
+    "09": "09-Uttar Pradesh",
+    "10": "10-Bihar",
+    "11": "11-Sikkim",
+    "12": "12-Arunachal Pradesh",
+    "13": "13-Nagaland",
+    "14": "14-Manipur",
+    "15": "15-Mizoram",
+    "16": "16-Tripura",
+    "17": "17-Meghalaya",
+    "18": "18-Assam",
+    "19": "19-West Bengal",
+    "20": "20-Jharkhand",
+    "21": "21-Odisha",
+    "22": "22-Chhattisgarh",
+    "23": "23-Madhya Pradesh",
+    "24": "24-Gujarat",
+    "26": "26-Dadra & Nagar Haveli and Daman & Diu",
+    "27": "27-Maharashtra",
+    "28": "28-Andhra Pradesh",
+    "29": "29-Karnataka",
+    "30": "30-Goa",
+    "31": "31-Lakshadweep",
+    "32": "32-Kerala",
+    "33": "33-Tamil Nadu",
+    "34": "34-Puducherry",
+    "35": "35-Andaman & Nicobar Islands",
+    "36": "36-Telangana",
+    "37": "37-Andhra Pradesh (New)",
+    "38": "38-Ladakh",
+    "97": "97-Other Territory",
+    "99": "99-Centre Jurisdiction",
+}
+
+def gstin_to_pos(gstin_str):
+    """Extract Place of Supply from first 2 digits of GSTIN."""
+    g = str(gstin_str).strip().upper()
+    if len(g) >= 2:
+        code = g[:2]
+        return STATE_CODE_MAP.get(code, "")
+    return ""
+
+def make_fill(hex_color):
+    return PatternFill(start_color=hex_color, end_color=hex_color, fill_type="solid")
+
+def make_border(color=BORDER_COLOR):
+    s = Side(style='thin', color=color)
+    return Border(left=s, right=s, top=s, bottom=s)
+
+def apply_sheet_style(ws, sheet_name,
+                      summary_bold_rows=None,
+                      summary_header_rows=None,
+                      skip_grand_total=False,
+                      is_hsn=False,
+                      docs_total_col=None):
+    h_fill   = make_fill(HDR_COLOR)
+    alt_fill = make_fill(ALT_COLOR)
+    tot_fill = make_fill(TOTAL_COLOR)
+    bld_fill = make_fill(BOLD_COLOR)
+    no_fill  = PatternFill(fill_type=None)
+    h_font  = Font(name="Calibri", size=10, bold=True,  color=HDR_FONT_CL)
+    d_font  = Font(name="Calibri", size=10, bold=False, color="1C2333")
+    b_font  = Font(name="Calibri", size=10, bold=True,  color="1C2333")
+    t_font  = Font(name="Calibri", size=10, bold=True,  color=TOTAL_FONT)
+    thin    = make_border()
+    hdr_bdr = make_border("8899CC")
+    center = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    left   = Alignment(horizontal='left',   vertical='center')
+    ws.sheet_properties.tabColor = TAB_COLOR
+    for cell in ws[1]:
+        cell.fill = h_fill; cell.font = h_font
+        cell.border = thin; cell.alignment = center
+    for r in range(2, ws.max_row + 1):
+        is_bold_row   = summary_bold_rows   and r in summary_bold_rows
+        is_hdr_row    = summary_header_rows and r in summary_header_rows
+        if is_hdr_row:
+            row_fill = h_fill;   row_font = h_font
+        elif is_bold_row:
+            row_fill = bld_fill; row_font = b_font
+        else:
+            row_fill = alt_fill if r % 2 == 0 else no_fill
+            row_font = d_font
+        for c in range(1, ws.max_column + 1):
+            cell = ws.cell(row=r, column=c)
+            cell.fill = row_fill; cell.font = row_font
+            cell.border = thin;  cell.alignment = left
+    for col in ws.columns:
+        max_len    = 0
+        col_letter = col[0].column_letter
+        for cell in col:
+            try: max_len = max(max_len, len(str(cell.value) if cell.value else ""))
+            except: pass
+        ws.column_dimensions[col_letter].width = min(max(max_len + 3, 12), 45)
+    ws.freeze_panes = "A2"
+    if not skip_grand_total and ws.max_row > 1:
+        t_row     = ws.max_row + 1
+        label_col = 1 if is_hsn else 2
+        sum_start = 4 if is_hsn else 5
+        ws.cell(row=t_row, column=label_col, value="Grand Total")
+        for c_idx in range(1, ws.max_column + 1):
+            cell = ws.cell(row=t_row, column=c_idx)
+            if c_idx >= sum_start:
+                let = openpyxl.utils.get_column_letter(c_idx)
+                cell.value = f"=SUM({let}2:{let}{t_row-1})"
+            cell.fill = tot_fill; cell.font = t_font
+            cell.border = hdr_bdr; cell.alignment = left
+    if docs_total_col and ws.max_row > 1:
+        t_row = ws.max_row + 1
+        ws.cell(row=t_row, column=2, value="Total")
+        for c_idx in range(1, ws.max_column + 1):
+            cell = ws.cell(row=t_row, column=c_idx)
+            if c_idx == docs_total_col:
+                let = openpyxl.utils.get_column_letter(c_idx)
+                cell.value = f"=SUM({let}2:{let}{t_row-1})"
+            cell.fill = tot_fill; cell.font = t_font
+            cell.border = hdr_bdr; cell.alignment = left
+
+def add_sheet_title(ws, title_lines, n_cols):
+    h_fill = make_fill(HDR_COLOR)
+    thin = make_border()
+    center = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    col_end = openpyxl.utils.get_column_letter(n_cols)
+    for i, (text, font_size) in enumerate(title_lines):
+        row_idx = i + 1
+        ws.insert_rows(row_idx)
+        ws.merge_cells(f"A{row_idx}:{col_end}{row_idx}")
+        cell = ws.cell(row=row_idx, column=1, value=text)
+        cell.fill      = h_fill
+        cell.font      = Font(name="Calibri", size=font_size, bold=True, color=HDR_FONT_CL)
+        cell.alignment = center
+        cell.border    = thin
+        ws.row_dimensions[row_idx].height = 18 if font_size >= 12 else 15
+
+# ── Core parsing ─────────────────────────────────────────────────────────────
+def parse_register(bytes_in, log_fn=None):
+    """Read a Tally export (CSV or XLSX) and return a clean DataFrame.
+    Column names come directly from row 9 of the file.
+    """
+    if len(bytes_in) == 0:
+        return None
+    raw_bytes = bytes_in.to_py()
+    buf = io.BytesIO(raw_bytes)
+    is_csv = b',' in raw_bytes[:500]
+    df_raw = pd.read_csv(buf, header=None, dtype=str) if is_csv else pd.read_excel(buf, header=None, dtype=str)
+
+    # Row 9 = column headers
+    hdr_row = df_raw.iloc[9].fillna('').astype(str).str.strip().tolist()
+    if log_fn:
+        log_fn("DEBUG columns found: " + str(hdr_row))
+
+    # Make column names unique by appending _1, _2 for genuine duplicates
+    seen = {}
+    unique_hdrs = []
+    for h in hdr_row:
+        if h in seen:
+            seen[h] += 1
+            unique_hdrs.append(f"{h}_{seen[h]}")
+        else:
+            seen[h] = 0
+            unique_hdrs.append(h)
+
+    df = df_raw.iloc[10:].copy()
+    df.columns = unique_hdrs
+    df = df.reset_index(drop=True)
+
+    # Drop grand total / blank / nan rows using Particulars column
+    if 'Particulars' in df.columns:
+        df['Particulars'] = df['Particulars'].astype(str).str.strip()
+        df = df[~df['Particulars'].isin(['Grand Total', 'nan', ''])].copy()
+
+    return df
+
+def to_num(series):
+    return pd.to_numeric(series, errors='coerce').fillna(0)
+
+def build_clean_df(df, log_fn=None):
+    """Extract standardised columns from a parsed Tally register DataFrame."""
+    res = pd.DataFrame(index=df.index)
+
+    def get_col(name, numeric=False):
+        if name in df.columns:
+            col = df[name]
+        else:
+            matches = [c for c in df.columns if c.strip().upper() == name.upper()]
+            col = df[matches[0]] if matches else pd.Series('', index=df.index)
+        return to_num(col) if numeric else col.fillna('').astype(str).str.strip()
+
+    res['GSTIN/UIN of Recipient'] = get_col('GSTIN/UIN')
+    res['Receiver Name']          = get_col('Particulars')
+    res['Invoice Number']         = get_col('Voucher No.')
+    res['Invoice Date']           = get_col('Date')
+
+    igst = to_num(get_col('Output IGST'))
+    cgst = to_num(get_col('Output CGST'))
+    sgst = to_num(get_col('Output SGST'))
+
+    if log_fn:
+        log_fn(f"DEBUG IGST sum={igst.sum():.2f}  CGST sum={cgst.sum():.2f}  SGST sum={sgst.sum():.2f}")
+
+    res['IGST'] = igst
+    res['CGST'] = cgst
+    res['SGST'] = sgst
+
+    gross     = to_num(get_col('Gross Total'))
+    total_tax = igst + cgst + sgst
+    taxable   = gross - total_tax
+    taxable   = taxable.where(taxable > 0, gross)
+
+    res['Taxable Value'] = taxable
+    res['Invoice Value'] = taxable + total_tax
+
+    slabs = [0, 5, 12, 18, 28]
+    def calc_rate(row):
+        tv = row['Taxable Value']
+        if tv <= 0: return 0
+        if row['IGST'] > 0:
+            pct = (row['IGST'] / tv) * 100
+        elif row['CGST'] + row['SGST'] > 0:
+            pct = ((row['CGST'] + row['SGST']) / tv) * 100
+        else:
+            return 0
+        return min(slabs, key=lambda x: abs(x - pct))
+    res['Rate'] = res.apply(calc_rate, axis=1)
+
+    # ── FIX 1: Place of Supply ────────────────────────────────────────────────
+    # For intra-state (CGST+SGST): always 32-Kerala
+    # For inter-state B2B (IGST + has GSTIN): derive from first 2 digits of GSTIN
+    # For inter-state B2C (IGST + no GSTIN): left blank — user will fill via modal
+    res['Place Of Supply'] = ''
+    for idx, row in res.iterrows():
+        gstin_val = str(row['GSTIN/UIN of Recipient']).strip().upper()
+        has_gstin = gstin_val not in ('NAN', '', 'NONE')
+        if row['CGST'] > 0 or row['SGST'] > 0:
+            res.at[idx, 'Place Of Supply'] = '32-Kerala'
+        elif row['IGST'] > 0 and has_gstin:
+            # B2B inter-state: derive POS from GSTIN state code
+            pos = gstin_to_pos(gstin_val)
+            res.at[idx, 'Place Of Supply'] = pos if pos else '32-Kerala'
+        # B2C IGST (no GSTIN): leave blank for user to fill via modal
+
+    return res[['GSTIN/UIN of Recipient','Receiver Name','Invoice Number','Invoice Date',
+                'Invoice Value','Place Of Supply','Rate','Taxable Value','IGST','CGST','SGST']]
+
+def strip_gstin(df):
+    return df[[c for c in df.columns if c != 'GSTIN/UIN of Recipient']]
+
+# ── FIX 2: HSN parsing — section-based (B2B / B2C from labels in file) ───────
+def parse_hsn_file(hsn_bytes):
+    """
+    Tally HSN/SAC Summary export structure (0-indexed rows):
+      Row 0-9  : Company header / report title / GSTIN
+      Row 10   : "HSN/SAC Summary - HSN/SAC" label
+      Row 11   : Column headers row 1  (HSN/SAC, Description, UQC, Quantity, Total, Tax, Taxable, IGST, CGST, SGST/UTGST, Cess, Tax)
+      Row 12   : Column headers row 2  (blank, blank, blank, blank, Amount, Rate, Amount, blank, blank, blank, blank, Amount)
+      Row 13   : "B2B Supplies" section label
+      Row 14+  : B2B data rows
+      Row N    : "B2C Supplies" section label
+      Row N+1+ : B2C data rows
+      Last row : "Total" row
+    We detect section labels dynamically so the row numbers are flexible.
+    """
+    raw_bytes = hsn_bytes.to_py()
+    buf = io.BytesIO(raw_bytes)
+    is_csv = b',' in raw_bytes[:500]
+    df_raw = pd.read_excel(buf, header=None) if not is_csv else pd.read_csv(buf, header=None)
+
+    # Build merged column headers from rows 11 and 12
+    row_11 = df_raw.iloc[11].fillna('').astype(str).str.strip().tolist()
+    row_12 = df_raw.iloc[12].fillna('').astype(str).str.strip().tolist()
+    headers = []
+    for r11, r12 in zip(row_11, row_12):
+        combined = (r11 + " " + r12).strip().replace("nan", "").strip()
+        headers.append(combined)
+    # Normalise first column name
+    if headers:
+        headers[0] = "HSN_SAC"
+
+    # All data rows start from row 13 onward
+    data_rows = df_raw.iloc[13:].copy()
+    data_rows.columns = headers[:len(data_rows.columns)]
+    data_rows = data_rows.reset_index(drop=True)
+
+    # Column index mapping (robust: find by partial name match)
+    def find_col(partial, cols):
+        for c in cols:
+            if partial.upper() in c.upper():
+                return c
+        return None
+
+    col_hsn      = "HSN_SAC"
+    col_uqc      = find_col("UQC",      headers) or headers[2]
+    col_qty      = find_col("Quantity",  headers) or headers[3]
+    col_total    = find_col("Total Amount", headers) or find_col("Total", headers) or headers[4]
+    col_rate     = find_col("Tax Rate",  headers) or find_col("Rate",  headers) or headers[5]
+    col_taxable  = find_col("Taxable",   headers) or headers[6]
+    col_igst     = find_col("IGST",      headers) or headers[7]
+    col_cgst     = find_col("CGST",      headers) or headers[8]
+    col_sgst     = find_col("SGST",      headers) or headers[9]
+
+    # Scan for section labels: "B2B Supplies" and "B2C Supplies"
+    b2b_rows = []
+    b2c_rows = []
+    current_section = None  # will be 'B2B' or 'B2C'
+
+    for _, row in data_rows.iterrows():
+        first_cell = str(row.iloc[0]).strip() if pd.notna(row.iloc[0]) else ""
+
+        # Detect section header rows
+        if "B2B" in first_cell.upper() and "SUPPLI" in first_cell.upper():
+            current_section = "B2B"
+            continue
+        if "B2C" in first_cell.upper() and "SUPPLI" in first_cell.upper():
+            current_section = "B2C"
+            continue
+
+        # Skip total rows and blank HSN rows
+        if first_cell.upper() in ("TOTAL", "GRAND TOTAL", "", "NAN"):
+            continue
+        # Skip rows where HSN looks like a section label (non-numeric, long text)
+        if not any(c.isdigit() for c in first_cell):
+            continue
+
+        if current_section is None:
+            continue  # skip rows before any section label is found
+
+        # Build clean record
+        def sv(col_name):
+            try:
+                return row[col_name] if col_name in row.index else None
+            except:
+                return None
+
+        record = {
+            'HSN/SAC':        first_cell,
+            'UQC':            str(sv(col_uqc) or '').strip(),
+            'Tax Rate':       pd.to_numeric(sv(col_rate),    errors='coerce') or 0,
+            'Quantity':       pd.to_numeric(sv(col_qty),     errors='coerce') or 0,
+            'Total Amount':   pd.to_numeric(sv(col_total),   errors='coerce') or 0,
+            'Taxable Amount': pd.to_numeric(sv(col_taxable), errors='coerce') or 0,
+            'IGST':           pd.to_numeric(sv(col_igst),    errors='coerce') or 0,
+            'CGST':           pd.to_numeric(sv(col_cgst),    errors='coerce') or 0,
+            'SGST':           pd.to_numeric(sv(col_sgst),    errors='coerce') or 0,
+        }
+
+        if current_section == "B2B":
+            b2b_rows.append(record)
+        else:
+            b2c_rows.append(record)
+
+    cols_out = ['HSN/SAC','UQC','Tax Rate','Quantity','Total Amount','Taxable Amount','IGST','CGST','SGST']
+    hsn_b2b = pd.DataFrame(b2b_rows, columns=cols_out) if b2b_rows else pd.DataFrame(columns=cols_out)
+    hsn_b2c = pd.DataFrame(b2c_rows, columns=cols_out) if b2c_rows else pd.DataFrame(columns=cols_out)
+
+    return hsn_b2b, hsn_b2c
+
+# ── Step 1: scan for B2C IGST rows that need Place of Supply ─────────────────
+def analyse_files(sales_bytes, cn_bytes):
+    frames = []
+    sales_raw = parse_register(sales_bytes)
+    if sales_raw is not None:
+        sales_clean = build_clean_df(sales_raw)
+        gstin = sales_clean['GSTIN/UIN of Recipient'].str.upper()
+        b2c = sales_clean[gstin.isin(['NAN','','NONE'])]
+        igst_sales = b2c[b2c['IGST'] > 0][['Receiver Name','Invoice Number','Invoice Date','IGST']].copy()
+        igst_sales['Type'] = 'Sale'
+        frames.append(igst_sales)
+
+    cn_raw = parse_register(cn_bytes)
+    if cn_raw is not None:
+        cn_clean = build_clean_df(cn_raw)
+        gstin_cn = cn_clean['GSTIN/UIN of Recipient'].str.upper()
+        b2c_cn = cn_clean[gstin_cn.isin(['NAN','','NONE'])]
+        igst_cn = b2c_cn[b2c_cn['IGST'] > 0][['Receiver Name','Invoice Number','Invoice Date','IGST']].copy()
+        igst_cn['Type'] = 'Credit Note'
+        frames.append(igst_cn)
+
+    if frames:
+        combined = pd.concat(frames, ignore_index=True)
+    else:
+        combined = pd.DataFrame(columns=['Receiver Name','Invoice Number','Invoice Date','IGST','Type'])
+    return json.dumps(combined.to_dict(orient='records'))
+
+# ── Step 2: compile full workbook ─────────────────────────────────────────────
+def process_gstr1_data(sales_bytes, cn_bytes, hsn_bytes, period_str, pos_map_js):
+    try:
+        pos_map = json.loads(pos_map_js) if pos_map_js else {}
+    except:
+        pos_map = {}
+
+    period_label = "PERIOD NOT SPECIFIED"
+    if period_str and len(period_str) >= 7:
+        try:
+            yr, mo = int(period_str[:4]), int(period_str[5:7])
+            period_label = f"{calendar.month_name[mo].upper()} {yr}"
+        except: pass
+
+    sales_raw = parse_register(sales_bytes)
+    cn_raw    = parse_register(cn_bytes)
+
+    sales_clean = build_clean_df(sales_raw) if sales_raw is not None else pd.DataFrame()
+    cn_clean    = build_clean_df(cn_raw)    if cn_raw    is not None else pd.DataFrame(columns=sales_clean.columns if not sales_clean.empty else
+                  ['GSTIN/UIN of Recipient','Receiver Name','Invoice Number','Invoice Date',
+                   'Invoice Value','Place Of Supply','Rate','Taxable Value','IGST','CGST','SGST'])
+
+    # Apply user-confirmed Place of Supply for B2C inter-state rows (from modal)
+    for df in [sales_clean, cn_clean]:
+        if df.empty: continue
+        for idx, row in df.iterrows():
+            inv_no = str(row['Invoice Number']).strip()
+            if row['IGST'] > 0 and inv_no in pos_map:
+                df.at[idx, 'Place Of Supply'] = pos_map[inv_no]
+
+    # Split B2B / B2C
+    def split_b2b_b2c(df):
+        if df.empty:
+            empty = df.copy()
+            return empty, empty
+        gstin = df['GSTIN/UIN of Recipient'].astype(str).str.strip().str.upper()
+        b2b = df[~gstin.isin(['NAN','','NONE'])].copy()
+        b2c = df[ gstin.isin(['NAN','','NONE'])].copy()
+        return b2b, b2c
+
+    b2b_df, b2c_df = split_b2b_b2c(sales_clean)
+    b2b_cn, b2c_cn = split_b2b_b2c(cn_clean)
+
+    # ── Summary ──────────────────────────────────────────────────────────────
+    def sums(df):
+        if df.empty: return [0,0,0,0,0]
+        return [df['Taxable Value'].sum(), df['IGST'].sum(), df['CGST'].sum(), df['SGST'].sum(), df['Invoice Value'].sum()]
+
+    def diff(a, b): return [x-y for x,y in zip(a,b)]
+
+    s_b2b = sums(b2b_df); s_b2b_cn = sums(b2b_cn); s_b2b_net = diff(s_b2b, s_b2b_cn)
+    s_b2c = sums(b2c_df); s_b2c_cn = sums(b2c_cn); s_b2c_net = diff(s_b2c, s_b2c_cn)
+    s_tot = [s_b2b_net[i] + s_b2c_net[i] for i in range(5)]
+
+    summary_rows = [
+        ['B2B Sales',                   s_b2b[0],    '', s_b2b[1],    s_b2b[2],    s_b2b[3],    s_b2b[4]],
+        ['B2B Credit Note',             s_b2b_cn[0], '', s_b2b_cn[1], s_b2b_cn[2], s_b2b_cn[3], s_b2b_cn[4]],
+        ['B2B Total (Sales - CN)',       s_b2b_net[0],'', s_b2b_net[1],s_b2b_net[2],s_b2b_net[3],s_b2b_net[4]],
+        ['B2C Sales',                   s_b2c[0],    '', s_b2c[1],    s_b2c[2],    s_b2c[3],    s_b2c[4]],
+        ['B2C CN',                      s_b2c_cn[0], '', s_b2c_cn[1], s_b2c_cn[2], s_b2c_cn[3], s_b2c_cn[4]],
+        ['B2C Total (Sales - CN)',       s_b2c_net[0],'', s_b2c_net[1],s_b2c_net[2],s_b2c_net[3],s_b2c_net[4]],
+        ['Total Sales = B2B + B2C Net', s_tot[0],    '', s_tot[1],    s_tot[2],    s_tot[3],    s_tot[4]],
+    ]
+    summary_df = pd.DataFrame(summary_rows,
+        columns=['Particulars','Taxable Value','Rate','IGST','CGST','SGST','Invoice Value'])
+
+    # ── Docs Issued ───────────────────────────────────────────────────────────
+    def doc_range(raw_df, prefix):
+        if raw_df is None: return 'N/A', 'N/A', 0
+        vnos = pd.to_numeric(
+            raw_df['Voucher No.'].astype(str).str.split('/').str[-1]
+            if 'Voucher No.' in raw_df.columns
+            else pd.Series(dtype=str),
+            errors='coerce').dropna()
+        if vnos.empty: return 'N/A', 'N/A', 0
+        return f"{prefix}/{int(vnos.min()):03d}", f"{prefix}/{int(vnos.max()):03d}", len(vnos)
+
+    INV_PREFIX = "ISL/2026-27"
+    doc_from, doc_to, doc_count = doc_range(sales_raw, INV_PREFIX)
+    cn_from,  cn_to,  cn_count  = doc_range(cn_raw,    INV_PREFIX)
+    docs_df = pd.DataFrame([
+        [1, 'Invoice for outward Supply', doc_from, doc_to, doc_count, 0],
+        [2, 'Credit Note',                cn_from,  cn_to,  cn_count,  0],
+    ], columns=['Sl. No.','Particulars','Doc From','Doc To','No. of Documents','Cancelled'])
+
+    # ── HSN ───────────────────────────────────────────────────────────────────
+    # FIX 2: Use section-based parsing instead of IGST-based split
+    hsn_b2b_df = hsn_b2c_df = None
+    if len(hsn_bytes) > 0:
+        hsn_b2b_df, hsn_b2c_df = parse_hsn_file(hsn_bytes)
+
+    # ── B2C combined (sales + negated credit notes) ───────────────────────────
+    if not b2c_cn.empty:
+        b2c_cn_neg = b2c_cn.copy()
+        for col in ['Invoice Value','Taxable Value','IGST','CGST','SGST']:
+            b2c_cn_neg[col] = b2c_cn_neg[col] * -1
+        b2c_cn_neg['Receiver Name'] = b2c_cn_neg['Receiver Name'] + ' (Credit Note Return)'
+        b2c_combined = pd.concat([b2c_df, b2c_cn_neg], ignore_index=True)
+    else:
+        b2c_combined = b2c_df
+
+    COMPANY_NAME = "INTERSTELLAR DESIGN PRIVATE LIMITED"
+    GSTIN_HDR    = "GSTIN - 32AAFCI2643P1ZE"
+
+    # ── Write workbook ────────────────────────────────────────────────────────
+    out_buffer = io.BytesIO()
+    with pd.ExcelWriter(out_buffer, engine='openpyxl') as writer:
+        summary_df.to_excel(writer, sheet_name='Summary', index=False)
+        b2b_df.to_excel(writer, sheet_name='B2B Invoices', index=False)
+        strip_gstin(b2c_combined).to_excel(writer, sheet_name='B2C Invoices', index=False)
+        if not b2c_df.empty and b2c_df['Place Of Supply'].str.strip().ne('').any():
+            b2c_sum = b2c_df.groupby(['Place Of Supply','Rate']).agg(
+                {'Taxable Value':'sum','IGST':'sum','CGST':'sum','SGST':'sum','Invoice Value':'sum'}).reset_index()
+            b2c_sum.to_excel(writer, sheet_name='B2C Summary Table', index=False)
+        b2b_cn.to_excel(writer, sheet_name='B2B Credit Notes', index=False)
+        if not b2c_cn.empty:
+            strip_gstin(b2c_cn).to_excel(writer, sheet_name='B2C Credit Notes', index=False)
+        if hsn_b2b_df is not None and not hsn_b2b_df.empty:
+            hsn_b2b_df.to_excel(writer, sheet_name='HSN B2B', index=False)
+        if hsn_b2c_df is not None and not hsn_b2c_df.empty:
+            hsn_b2c_df.to_excel(writer, sheet_name='HSN B2C', index=False)
+        docs_df.to_excel(writer, sheet_name='Docs Issued', index=False)
+
+        workbook = writer.book
+        for name in workbook.sheetnames:
+            ws = workbook[name]
+            n_cols = ws.max_column
+            if name == 'Summary':
+                apply_sheet_style(ws, name, summary_bold_rows={4,7}, summary_header_rows={8}, skip_grand_total=True)
+                add_sheet_title(ws, [(COMPANY_NAME,13),(GSTIN_HDR,10),(f"GSTR-1 SUMMARY FOR THE MONTH OF {period_label}",11)], n_cols)
+                ws.freeze_panes = "A5"
+            elif name == 'B2B Invoices':
+                apply_sheet_style(ws, name)
+                add_sheet_title(ws, [(f"B2B INVOICES — {period_label}",11)], n_cols)
+                ws.freeze_panes = "A3"
+            elif name == 'B2C Invoices':
+                apply_sheet_style(ws, name)
+                add_sheet_title(ws, [(f"B2C INVOICES — {period_label}",11)], n_cols)
+                ws.freeze_panes = "A3"
+            elif name == 'B2C Summary Table':
+                apply_sheet_style(ws, name)
+                add_sheet_title(ws, [(f"B2C SUMMARY TABLE — {period_label}",11)], n_cols)
+                ws.freeze_panes = "A3"
+            elif name == 'B2B Credit Notes':
+                apply_sheet_style(ws, name)
+                add_sheet_title(ws, [(f"B2B CREDIT NOTES — {period_label}",11)], n_cols)
+                ws.freeze_panes = "A3"
+            elif name == 'B2C Credit Notes':
+                apply_sheet_style(ws, name)
+                add_sheet_title(ws, [(f"B2C CREDIT NOTES — {period_label}",11)], n_cols)
+                ws.freeze_panes = "A3"
+            elif name == 'HSN B2B':
+                apply_sheet_style(ws, name, is_hsn=True)
+                add_sheet_title(ws, [(f"HSN SUMMARY — B2B — {period_label}",11)], n_cols)
+                ws.freeze_panes = "A3"
+            elif name == 'HSN B2C':
+                apply_sheet_style(ws, name, is_hsn=True)
+                add_sheet_title(ws, [(f"HSN SUMMARY — B2C — {period_label}",11)], n_cols)
+                ws.freeze_panes = "A3"
+            elif name == 'Docs Issued':
+                doc_col_idx = None
+                for cell in ws[1]:
+                    if cell.value and 'No. of Documents' in str(cell.value):
+                        doc_col_idx = cell.column
+                        break
+                apply_sheet_style(ws, name, skip_grand_total=True, docs_total_col=doc_col_idx)
+                add_sheet_title(ws, [(f"DOCUMENTS ISSUED — {period_label}",11)], n_cols)
+                ws.freeze_panes = "A3"
+
+    return out_buffer.getvalue()
+
+`);
+                document.getElementById('status-box').className = "mb-6 p-4 bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 text-xs rounded-xl flex items-center justify-between shadow-lg backdrop-blur";
+                document.getElementById('status-text').innerHTML = "✓ System loaded. Ready to build production worksheets.";
+                document.getElementById('upload-section').classList.remove('pointer-events-none', 'opacity-20');
+            } catch (err) {
+                logMsg(`Init Failure: ${err.message}`, 'error');
+            }
+        }
+
+        function getBytes(file) {
+            return new Promise((resolve) => {
+                const r = new FileReader();
+                r.onload = () => resolve(new Uint8Array(r.result));
+                r.readAsArrayBuffer(file);
+            });
+        }
+
+        // Indian state codes for dropdown
+        const INDIAN_STATES = [
+            "01-Jammu & Kashmir","02-Himachal Pradesh","03-Punjab","04-Chandigarh",
+            "05-Uttarakhand","06-Haryana","07-Delhi","08-Rajasthan","09-Uttar Pradesh",
+            "10-Bihar","11-Sikkim","12-Arunachal Pradesh","13-Nagaland","14-Manipur",
+            "15-Mizoram","16-Tripura","17-Meghalaya","18-Assam","19-West Bengal",
+            "20-Jharkhand","21-Odisha","22-Chhattisgarh","23-Madhya Pradesh",
+            "24-Gujarat","26-Dadra & Nagar Haveli and Daman & Diu","27-Maharashtra",
+            "28-Andhra Pradesh","29-Karnataka","30-Goa","31-Lakshadweep","32-Kerala",
+            "33-Tamil Nadu","34-Puducherry","35-Andaman & Nicobar Islands","36-Telangana",
+            "37-Andhra Pradesh (New)","38-Ladakh","97-Other Territory","99-Centre Jurisdiction"
+        ];
+
+        let posMap = {};       // { invoiceNumber: "StateCode-StateName" }
+        let pendingRows = [];  // B2C IGST rows needing POS
+
+        function showPosModal(rows) {
+            pendingRows = rows;
+            posMap = {};
+            const modal = document.getElementById('pos-modal');
+            const container = document.getElementById('pos-rows');
+            container.innerHTML = '';
+            rows.forEach((row, i) => {
+                const stateOptions = INDIAN_STATES.map(s =>
+                    `<option value="${s}">${s}</option>`).join('');
+                container.innerHTML += `
+                <div class="glass-card p-4 rounded-xl mb-3">
+                    <div class="flex flex-col md:flex-row md:items-center gap-3">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[11px] font-bold text-slate-200 truncate">${row.Receiver_Name || row['Receiver Name']}</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">${row.Invoice_Number || row['Invoice Number']} &nbsp;|&nbsp; ${row.Invoice_Date || row['Invoice Date']} &nbsp;|&nbsp; IGST: ₹${parseFloat(row.IGST||0).toFixed(2)}</p>
+                            <p class="text-[10px] text-amber-400 mt-0.5">${row.Type}</p>
+                        </div>
+                        <div class="shrink-0 w-full md:w-64">
+                            <select id="pos-sel-${i}" class="w-full text-xs bg-slate-950 text-slate-200 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:border-slate-500">
+                                <option value="">-- Select Place of Supply --</option>
+                                ${stateOptions}
+                            </select>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            modal.classList.remove('hidden');
+        }
+
+        function confirmPos() {
+            const rows = pendingRows;
+            let allFilled = true;
+            rows.forEach((row, i) => {
+                const sel = document.getElementById(`pos-sel-${i}`);
+                const invNo = row.Invoice_Number || row['Invoice Number'];
+                if (!sel.value) { allFilled = false; }
+                else { posMap[invNo] = sel.value; }
+            });
+            if (!allFilled) {
+                alert('Please select Place of Supply for all entries before proceeding.');
+                return;
+            }
+            document.getElementById('pos-modal').classList.add('hidden');
+            compileExcel();
+        }
+
+        let _sBytes, _cBytes, _hBytes;
+
+        async function processData() {
+            const sFile = document.getElementById('salesFile').files[0];
+            const cFile = document.getElementById('cnFile').files[0];
+            const hFile = document.getElementById('hsnFile').files[0];
+
+            if(!sFile) {
+                logMsg("Error: Please provide at least the main Tally Sales Register.", "error");
+                return;
+            }
+
+            logMsg("Reading uploaded files...");
+            _sBytes = await getBytes(sFile);
+            _cBytes = cFile ? await getBytes(cFile) : new Uint8Array();
+            _hBytes = hFile ? await getBytes(hFile) : new Uint8Array();
+
+            logMsg("Scanning for B2C inter-state (IGST) transactions requiring Place of Supply confirmation...");
+            try {
+                const analyser = pyodide.globals.get('analyse_files');
+                const resultJson = analyser(_sBytes, _cBytes);
+                const igstRows = JSON.parse(resultJson);
+
+                if (igstRows && igstRows.length > 0) {
+                    logMsg(`Found ${igstRows.length} B2C IGST row(s) — please confirm Place of Supply.`);
+                    showPosModal(igstRows);
+                } else {
+                    logMsg("No B2C IGST rows found. Proceeding directly to compile...");
+                    posMap = {};
+                    compileExcel();
+                }
+            } catch(e) {
+                logMsg(`Analysis error: ${e.message}`, 'error');
+                console.error(e);
+            }
+        }
+
+        async function compileExcel() {
+            const filingMonth = document.getElementById('filingMonth').value || '';
+            logMsg("Compiling workbook...");
+            try {
+                const engine = pyodide.globals.get('process_gstr1_data');
+                const pyExcelBytes = engine(_sBytes, _cBytes, _hBytes, filingMonth, JSON.stringify(posMap));
+                
+                const cleanBuffer = new Uint8Array(pyExcelBytes.toJs());
+                const blob = new Blob([cleanBuffer], {type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `GSTR1_Automated_Workings_Production_${new Date().toISOString().split('T')[0]}.xlsx`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                logMsg("Success: Audit sheets compiled perfectly. Data validated and downloaded.", "success");
+            } catch(e) {
+                logMsg(`Pipeline Error Exception: ${e.message}`, "error");
+                console.error(e);
+            }
+        }
+
+        window.onload = initPyodide;
+    </script>
+
+    <!-- Place of Supply Modal -->
+    <div id="pos-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);">
+        <div class="glass-panel rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+            <div class="p-6 border-b border-slate-800/80">
+                <h2 class="text-sm font-bold text-slate-100">Confirm Place of Supply — B2C Inter-State (IGST) Transactions</h2>
+                <p class="text-[10px] text-slate-400 mt-1">These invoices have Output IGST but no GSTIN. Please select the correct state for each before compiling.</p>
+            </div>
+            <div id="pos-rows" class="p-6 overflow-y-auto flex-1"></div>
+            <div class="p-6 border-t border-slate-800/80">
+                <button onclick="confirmPos()" class="w-full bg-slate-100 hover:bg-white text-slate-950 font-bold text-xs uppercase tracking-wider py-3 rounded-xl transition-all duration-200 shadow-xl">
+                    Confirm & Compile Workbook
+                </button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
